@@ -37,6 +37,7 @@ func GetCurrentCashFlow(db *gorm.DB) []CashFlow {
 
 func computeCashFlow(db *gorm.DB, q *query.Query, balance decimal.Decimal) []CashFlow {
 	var cashFlows []CashFlow
+	q = q.ExcludeTransactionsWithAccount("Equity:OpeningBalance")
 
 	expenses := utils.GroupByMonth(q.Clone().Like("Expenses:%").NotAccountPrefix("Expenses:Tax").All())
 	incomes := utils.GroupByMonth(q.Clone().Like("Income:%").All())

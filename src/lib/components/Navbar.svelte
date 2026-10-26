@@ -47,6 +47,8 @@
     recurringIcons?: boolean;
     children?: Link[];
     disablePreload?: boolean;
+    local?: boolean;
+    absolute?: boolean;
   }
   const links: Link[] = [
     { label: "Dashboard", href: "/", hide: true },
@@ -89,7 +91,13 @@
         { label: "Investment", href: "/investment" },
         { label: "Gain", href: "/gain" },
         { label: "Allocation", href: "/allocation", help: "allocation-targets" },
-        { label: "Analysis", href: "/analysis", tag: "alpha", help: "analysis" }
+        { label: "Analysis", href: "/analysis", tag: "alpha", help: "analysis" },
+        {
+          label: "Local Portfolio",
+          href: "/assets/local_portfolio",
+          local: true,
+          absolute: true
+        }
       ]
     },
     {
@@ -127,6 +135,23 @@
     }
   ];
 
+  links.push({
+    label: "my-tabs",
+    href: "/my-tabs",
+    children: [
+      { label: "Personal Net worth", href: "/assets/local_networth", local: true, absolute: true },
+      { label: "Imported Holdings", href: "/assets/holdings", local: true, absolute: true },
+      {
+        label: "Imported Transactions",
+        href: "/ledger/local_imports",
+        local: true,
+        absolute: true
+      },
+      { label: "News", href: "/more/news", local: true, absolute: true },
+      { label: "Tax History", href: "/more/tax/history", local: true, absolute: true }
+    ]
+  });
+
   const tax = {
     label: "Tax",
     href: "/tax",
@@ -144,17 +169,24 @@
   };
 
   if (USER_CONFIG.default_currency == "INR") {
-    _.last(links).children.push(tax);
+    links.find((link) => link.label === "More")?.children?.push(tax);
   }
 
   const about = { label: "About", href: "/about" };
-  _.last(links).children.push(about);
+  links.find((link) => link.label === "More")?.children?.push(about);
 
   let selectedLink: Link = null;
   let selectedSubLink: Link = null;
   let selectedSubSubLink: Link = null;
 
   $: normalizedPath = $page.url.pathname?.replace(/(.+)\/$/, "");
+
+  const hrefFor = (parent: Link, link: Link) =>
+    link.absolute ? link.href : parent.href + link.href;
+
+  const isActiveLink = (link: Link) =>
+    normalizedPath.startsWith(link.href) ||
+    link.children?.some((child) => normalizedPath.startsWith(hrefFor(link, child)));
 
   $: if (normalizedPath) {
     selectedSubLink = null;
@@ -163,22 +195,28 @@
     if (!selectedLink) {
       selectedLink = _.find(
         links,
-        (l) => !_.isEmpty(l.children) && normalizedPath.startsWith(l.href)
+        (l) =>
+          !_.isEmpty(l.children) && l.children.some((child) => normalizedPath == hrefFor(l, child))
       );
+    }
+    if (!selectedLink) {
+      selectedLink = _.find(links, (l) => !_.isEmpty(l.children) && isActiveLink(l));
+    }
 
+    if (selectedLink?.children) {
       selectedSubLink = _.find(
         selectedLink.children,
-        (l) => normalizedPath == selectedLink.href + l.href
+        (l) => normalizedPath == hrefFor(selectedLink, l)
       );
 
       if (!selectedSubLink) {
         selectedSubLink = _.find(selectedLink.children, (l) =>
-          normalizedPath.startsWith(selectedLink.href + l.href)
+          normalizedPath.startsWith(hrefFor(selectedLink, l))
         );
 
         if (!_.isEmpty(selectedSubLink.children)) {
           selectedSubSubLink = _.find(selectedSubLink.children, (l) =>
-            normalizedPath.startsWith(selectedLink.href + selectedSubLink.href + l.href)
+            normalizedPath.startsWith(hrefFor(selectedLink, selectedSubLink) + l.href)
           );
         }
       }
@@ -233,20 +271,23 @@
           <div class="navbar-item has-dropdown is-hoverable">
             <a
               class="navbar-link"
-              class:is-active={normalizedPath.startsWith(link.href)}
+              class:is-active={isActiveLink(link)}
               on:click|preventDefault={(e) =>
                 isMobile() && e.currentTarget.parentElement.classList.toggle("is-active")}
               >{link.label}</a
             >
             <div class="navbar-dropdown {!isMobile() && 'is-boxed'}">
               {#each link.children as sublink}
-                {@const href = link.href + sublink.href}
+                {@const href = hrefFor(link, sublink)}
                 {#if _.isEmpty(sublink.children)}
                   <a
                     class="navbar-item"
                     {href}
                     data-sveltekit-preload-data={sublink.disablePreload ? "tap" : "hover"}
-                    class:is-active={normalizedPath.startsWith(href)}>{sublink.label}</a
+                    class:is-active={normalizedPath.startsWith(href)}
+                    ><span class:local-feature-label={sublink.local}>{sublink.label}</span
+                    >{#if sublink.local}<span class="tag is-rounded local-feature-badge">LOCAL</span
+                      >{/if}</a
                   >
                 {:else}
                   <div class="nested has-dropdown navbar-item">
@@ -273,7 +314,11 @@
                               ? "tap"
                               : "hover"}
                             class:is-active={normalizedPath == href + subsublink.href}
-                            >{subsublink.label}</a
+                            ><span class:local-feature-label={subsublink.local}
+                              >{subsublink.label}</span
+                            >{#if subsublink.local}<span class="tag is-rounded local-feature-badge"
+                                >LOCAL</span
+                              >{/if}</a
                           >
                         {/each}
                       </div>
@@ -436,5 +481,23 @@
 <style lang="scss">
   li a span.icon {
     margin-top: -5px;
+  }
+
+  .local-feature-label {
+    font-weight: 700;
+  }
+
+  .local-feature-badge {
+    background: #4f46e5;
+    color: #fff;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.045em;
+    margin-left: auto;
+  }
+
+  .navbar-dropdown .navbar-item,
+  .dropdown-content .navbar-item {
+    gap: 0.45rem;
   }
 </style>

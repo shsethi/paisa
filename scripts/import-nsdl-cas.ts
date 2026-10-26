@@ -1,0 +1,7 @@
+import { importNsdlCas } from "../src/lib/finance/nsdl_cas_import";
+const args = process.argv.slice(2); let file: string | undefined; let root: string | undefined; let passwordEnv = "NSDL_CAS_PDF_PASSWORD"; let dryRun = false;
+for (let index = 0; index < args.length; index++) { const arg = args[index]; if (arg === "--dry-run") dryRun = true; else if (["--file", "--root", "--password-env"].includes(arg)) { const value = args[++index]; if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value.`); if (arg === "--file") file = value; else if (arg === "--root") root = value; else passwordEnv = value; } else if (arg !== "--help" && arg !== "-h") throw new Error("Unsupported command option."); }
+if (args.includes("--help") || args.includes("-h")) process.stdout.write('Import an NSDL CAS locally. The password is read from NSDL_CAS_PDF_PASSWORD.\nUsage: npm run finance:import-nsdl-cas -- --file "investments/cas/statement.pdf" [--dry-run]\n');
+else if (!file) { process.stderr.write("--file is required.\n"); process.exitCode = 2; }
+else { try { const result = await importNsdlCas({ file, root, password: process.env[passwordEnv], dryRun }); process.stdout.write(`${JSON.stringify(result)}\n`); if (result.status === "failed") process.exitCode = 1; } catch (error) { process.stderr.write(`${error instanceof Error ? error.message : "Import failed."}\n`); process.exitCode = 1; } }
+

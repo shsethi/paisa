@@ -8,7 +8,7 @@ import (
 )
 
 func GetRepayment(db *gorm.DB) gin.H {
-	postings := query.Init(db).Like("Liabilities:%").Credit().All()
+	postings := query.Init(db).ExcludeTransactionsWithAccount("Equity:OpeningBalance").Like("Liabilities:%").Credit().All()
 	postings = service.PopulateMarketPrice(db, postings)
 	expenses := query.Init(db).Like("Expenses:Interest:%").All()
 	postings = append(postings, expenses...)

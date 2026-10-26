@@ -28,7 +28,7 @@ type Interest struct {
 }
 
 func GetInterest(db *gorm.DB) gin.H {
-	postings := query.Init(db).Like("Liabilities:%").All()
+	postings := query.Init(db).ExcludeTransactionsWithAccount("Equity:OpeningBalance").Like("Liabilities:%").All()
 	expenses := query.Init(db).Like("Expenses:Interest:%").All()
 	postings = service.PopulateMarketPrice(db, postings)
 	byAccount := lo.GroupBy(postings, func(p posting.Posting) string { return p.RestName(1) })

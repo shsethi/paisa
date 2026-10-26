@@ -15,6 +15,7 @@ var DEFAULT_PATH = []string{
 	"/bin",
 	"/usr/bin",
 	"/usr/local/bin",
+	"/opt/local/bin",
 	"/sbin",
 	"/usr/sbin",
 	"/opt/homebrew/bin",

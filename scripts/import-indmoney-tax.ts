@@ -1,0 +1,6 @@
+import { importIndmoneyTaxFile } from "../src/lib/finance/indmoney_tax_import";
+const args = process.argv.slice(2); let file: string | undefined; let root: string | undefined; let dryRun = false;
+for (let i = 0; i < args.length; i++) { const a = args[i]; if (a === "--dry-run") dryRun = true; else if (a === "--file" || a === "--root") { const v = args[++i]; if (!v || v.startsWith("--")) throw new Error(`${a} requires a value.`); if (a === "--file") file = v; else root = v; } else if (a !== "--help" && a !== "-h") throw new Error("Unsupported command option."); }
+if (args.includes("--help") || args.includes("-h")) process.stdout.write('Import INDmoney US-stocks tax workbook.\nUsage: node --import=tsx scripts/import-indmoney-tax.ts --file "investments/indmoney/tax.xlsx" [--root "My Finance"] [--dry-run]\n');
+else if (!file) { process.stderr.write("--file is required.\n"); process.exitCode = 2; }
+else { try { const result = importIndmoneyTaxFile({ file, root, dryRun }); process.stdout.write(`${JSON.stringify(result)}\n`); if (result.status === "failed") process.exitCode = 1; } catch (e) { process.stderr.write(`${e instanceof Error ? e.message : "Import failed."}\n`); process.exitCode = 1; } }

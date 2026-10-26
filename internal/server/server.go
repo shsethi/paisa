@@ -202,6 +202,12 @@ func Build(db *gorm.DB, enableCompression bool) *gin.Engine {
 	router.GET("/api/transaction", func(c *gin.Context) {
 		c.JSON(200, GetTransactions(db))
 	})
+	router.GET("/api/finance/icici/transactions", GetLocalICICITransactions)
+	router.GET("/api/finance/portfolio", GetLocalFinancePortfolio)
+	router.GET("/api/finance/tax/history", GetLocalTaxHistory)
+	router.GET("/api/price/public", GetPublicMarketPrice)
+	router.POST("/api/price/public/refresh", RefreshPublicMarketPrice)
+	RegisterNewsRoutes(router, NewAlphaVantageNewsHTTPHandler())
 	router.GET("/api/harvest", func(c *gin.Context) {
 		c.JSON(200, GetHarvest(db))
 	})

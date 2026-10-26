@@ -107,6 +107,167 @@ export interface Transaction {
   postings: Posting[];
 }
 
+export interface LocalImportedBankTransaction {
+  date: string;
+  description: string;
+  debit: string | null;
+  credit: string | null;
+  currency: string;
+  balance: string | null;
+  category: string | null;
+  classification: string | null;
+  classification_detail: {
+    rule: string;
+    reason: string;
+    confidence: "high" | "medium" | "low";
+    review_needed: boolean;
+  };
+  review_status: "needs_review" | "reviewed";
+  source: { original_path: string; record_locator: string };
+}
+
+export interface LocalICICIImport {
+  original_path: string;
+  imported_at: string;
+  status: "succeeded" | "succeeded_with_errors" | "failed";
+  row_counts: { read: number; accepted: number; rejected: number; skipped: number };
+  error_count: number;
+  source_current: boolean;
+}
+
+export interface LocalICICITransactions {
+  transactions: LocalImportedBankTransaction[];
+  imports: LocalICICIImport[];
+  warnings: string[];
+}
+
+export interface LocalFinanceRecord {
+  record_type: "holding" | "manual_balance";
+  source_id: string;
+  current_value?: string | null;
+  cost_basis?: string | null;
+  units?: string | null;
+  average_price?: string | null;
+  nav?: string | null;
+  average_nav?: string | null;
+  total_returns_percent?: string | null;
+  xirr_percent?: string | null;
+  currency?: string | null;
+  as_of_date?: string | null;
+  balance_type?: "asset" | "liability" | "cash_flow";
+  amount?: string | null;
+  category?: string;
+  label?: string | null;
+  owner?: string | null;
+  account_label?: string | null;
+  security?: { name?: string; identifier?: string; symbol?: string; category?: string };
+  source: { import_id: string; original_path: string; content_sha256?: string; record_locator: string };
+}
+
+export interface LocalFinancePortfolio {
+  holdings: LocalFinanceRecord[];
+  balances: LocalFinanceRecord[];
+  imports: Array<{
+    source_type: string;
+    original_path: string;
+    imported_at: string;
+    status: string;
+    error_count: number;
+    source_current: boolean;
+  }>;
+  warnings: string[];
+}
+
+export interface PublicMarketPrice {
+  identifier: { symbol: string; exchange?: string; asset_type?: string };
+  value: string;
+  currency: string;
+  as_of: string;
+  refreshed_at: string;
+  provider: string;
+  source: string;
+  source_url: string;
+}
+
+export interface PublicNewsItem {
+  headline: string;
+  source: string;
+  publishedAt: string;
+  link: string;
+  relatedIdentifier: { kind: string; value: string };
+  relatedCategory: string;
+  relevanceNote: string;
+}
+
+export interface PublicNewsStatus {
+  configured: boolean;
+  provider: string;
+  premium: boolean;
+}
+
+export interface LocalTaxReturn {
+  source_type: "itr_json" | "itr_xml" | "itr_return_json" | "itr_return_xml";
+  original_path: string;
+  imported_at: string;
+  status: string;
+  record: {
+    source: { type: string; path?: string; contentHash: string; parserVersion: string };
+    identity: {
+      assessmentYear?: { value: string; sourcePath: string };
+      financialYear?: { value: string; sourcePath: string };
+      formName?: { value: string; sourcePath: string };
+      filingVersion: "original" | "revised" | "unknown";
+      regime?: { value: "new" | "old" | "unspecified"; sourcePath: string };
+    };
+    incomeHeads: Array<{ key: string; value: number; sourcePath: string }>;
+    deductions: Array<{ key: string; value: number; sourcePath: string }>;
+    taxes: Array<{ key: string; value: number; sourcePath: string }>;
+    capitalGains: Array<{ key: string; value: number; sourcePath: string }>;
+  };
+}
+
+export interface LocalTaxHistory {
+  returns: LocalTaxReturn[];
+  ais: Array<{
+    source_type: "ais_json";
+    original_path: string;
+    imported_at: string;
+    status: string;
+    record: {
+      identity: {
+        assessmentYear?: { value: string; sourcePath: string };
+        financialYear?: { value: string; sourcePath: string };
+      };
+      facts: Array<{
+        recordId: string;
+        section: string;
+        category: "income" | "tax" | "transaction" | "other";
+        description?: { value: string; sourcePath: string };
+        date?: { value: string; sourcePath: string };
+        amount?: { value: number; sourcePath: string };
+        taxDeducted?: { value: number; sourcePath: string };
+        taxCollected?: { value: number; sourcePath: string };
+        sourcePath: string;
+      }>;
+    };
+  }>;
+  annual_tax_credits: Array<{
+    financial_year: string | null;
+    reported_period_label: string | null;
+    section_code: string | null;
+    transaction_date: string | null;
+    amount_credited: string | null;
+    tax_deducted: string | null;
+    tax_deposited: string | null;
+    currency: string;
+    source: { original_path: string; record_locator: string };
+  }>;
+  form16: Array<{ source_type: "form16"; original_path: string; imported_at: string; status: string; record: { assessment_year: string; financial_year: string; fields: Array<{ key: string; label: string; value: string; source_page: number; record_locator: string }>; validations: Record<string, boolean> } }>;
+  form26as: Array<{ source_type: "form26as"; original_path: string; imported_at: string; status: string; record: { assessment_year: string; financial_year: string; deductors: Array<{ serial_number: number; deductor_name: string; tan: string; amount_paid: string; tax_deducted: string; tax_deposited: string; source_page: number; record_locator: string }>; totals: { amount_paid: string; tax_deducted: string; tax_deposited: string } } }>;
+  imports: Array<{ source_type: string; original_path: string; imported_at: string; status: string; error_count: number; source_current: boolean }>;
+  warnings: string[];
+}
+
 export interface BalancedPosting {
   from: Posting;
   to: Posting;
@@ -769,6 +930,22 @@ export function ajax(
 ): Promise<{ success: boolean; error?: string }>;
 
 export function ajax(route: "/api/ping"): Promise<{ success: boolean; error?: string }>;
+export function ajax(
+  route: "/api/finance/icici/transactions"
+): Promise<LocalICICITransactions>;
+export function ajax(route: "/api/finance/portfolio"): Promise<LocalFinancePortfolio>;
+export function ajax(route: "/api/finance/tax/history"): Promise<LocalTaxHistory>;
+export function ajax(route: "/api/price/public"): Promise<{ prices: PublicMarketPrice[] }>;
+export function ajax(route: "/api/news/status"): Promise<PublicNewsStatus>;
+export function ajax(route: "/api/news"): Promise<PublicNewsStatus & { items: PublicNewsItem[] }>;
+export function ajax(
+  route: "/api/news/search",
+  options?: RequestOptions
+): Promise<PublicNewsStatus & { items?: PublicNewsItem[]; error?: string; code?: string }>;
+export function ajax(
+  route: "/api/price/public/refresh",
+  options?: RequestOptions
+): Promise<{ price?: PublicMarketPrice; refreshed?: boolean; code?: string; error?: string }>;
 
 export async function ajax(
   route: string,

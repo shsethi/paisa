@@ -121,6 +121,16 @@ func (q *Query) NotLike(account string) *Query {
 	return q
 }
 
+// ExcludeTransactionsWithAccount removes every posting belonging to a
+// transaction that contains the given account. This is useful for excluding
+// opening-balance transactions without hiding those balances from balance and
+// net-worth reports.
+func (q *Query) ExcludeTransactionsWithAccount(account string) *Query {
+	subquery := q.context.Session(&gorm.Session{NewDB: true}).Model(&posting.Posting{}).Select("transaction_id").Where("account = ?", account)
+	q.context = q.context.Where("transaction_id NOT IN (?)", subquery)
+	return q
+}
+
 func (q *Query) Where(query interface{}, args ...interface{}) *Query {
 	q.context = q.context.Where(query, args...)
 	return q
